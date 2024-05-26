@@ -50,3 +50,25 @@ cmp.setup({
   }),
 })
 
+local lspconfig = require('lspconfig')
+lspconfig.clangd.setup {
+  filetypes = { "c", "cpp" },
+  cmd = {
+    'clangd',
+    '--header-insertion=never',
+  },
+  capabilities = capabilities,
+  on_attach = function(client, bufnr)
+    on_attach(client, bufnr) -- your on_attach function
+    local clangd = mason_registry.get_package("clangd")
+    local install_path = clangd:get_install_path()
+    local include_path = vim.fn.globpath(install_path, "**/include")
+    if vim.fn.isdirectory(include_path .. "/bits") == 0 then -- when not found
+      vim.fn.system("cp -r ~/.config/assets/clangd/bits " .. include_path)
+      vim.defer_fn(function()
+        pcall(vim.diagnostic.reset)
+        vim.notify("Successfully created bit/stdc++.h header")
+      end, 500)
+    end
+  end,
+}
