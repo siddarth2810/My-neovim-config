@@ -16,11 +16,9 @@ lsp_zero.on_attach(function(client, bufnr)
 end)
 
 require'lspconfig'.pyright.setup{}
--- to learn how to use mason.nvim with lsp-zero
--- read this: https://github.com/VonHeikemen/lsp-zero.nvim/blob/v3.x/doc/md/guides/integrate-with-mason-nvim.md
 require('mason').setup({})
 require('mason-lspconfig').setup({
-  ensure_installed = {'tsserver', 'rust_analyzer'},
+  ensure_installed = {'tsserver', 'rust_analyzer', 'clangd'},
   handlers = {
     lsp_zero.default_setup,
     lua_ls = function()
@@ -51,24 +49,33 @@ cmp.setup({
 })
 
 local lspconfig = require('lspconfig')
+local capabilities = require('cmp_nvim_lsp').default_capabilities()
+
 lspconfig.clangd.setup {
-  filetypes = { "c", "cpp" },
   cmd = {
     'clangd',
     '--header-insertion=never',
+    '--compile-commands-dir=/home/siddarth/DSA', -- Ensure this points to your project directory
   },
   capabilities = capabilities,
-  on_attach = function(client, bufnr)
-    on_attach(client, bufnr) -- your on_attach function
-    local clangd = mason_registry.get_package("clangd")
-    local install_path = clangd:get_install_path()
-    local include_path = vim.fn.globpath(install_path, "**/include")
-    if vim.fn.isdirectory(include_path .. "/bits") == 0 then -- when not found
-      vim.fn.system("cp -r ~/.config/assets/clangd/bits " .. include_path)
-      vim.defer_fn(function()
-        pcall(vim.diagnostic.reset)
-        vim.notify("Successfully created bit/stdc++.h header")
-      end, 500)
-    end
-  end,
+  filetypes = { "c", "cpp" },
+  on_attach = lsp_zero.on_attach,
 }
+
+-- Optional: If you don't have a compile_commands.json, you can add flags manually
+local clangd_flags = {
+  '--header-insertion=never',
+  '--query-driver=/usr/bin/clang++,/usr/bin/clang', -- Adjust according to your system
+  '--compile-commands-dir=/home/siddarth/DSA', -- Ensure this points to your project directory
+  '-I/usr/include/c++/11', -- Adjust according to your compiler version
+  '-I/usr/include/x86_64-linux-gnu/c++/11', -- Adjust according to your system
+}
+
+-- Make sure to replace the paths with actual paths on your system
+lspconfig.clangd.setup {
+  cmd = {'clangd', unpack(clangd_flags)},
+  capabilities = capabilities,
+  on_attach = lsp_zero.on_attach,
+  filetypes = { "c", "cpp" },
+}
+
